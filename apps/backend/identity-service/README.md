@@ -1,255 +1,202 @@
-# JWT Express Authentication API
+# Identity Service
 
-A robust Node.js/Express backend application with JWT authentication, built with TypeScript and Nx monorepo structure.
+[![Node](https://img.shields.io/badge/Node-20+-green)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-black)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-8.x-green)](https://www.mongodb.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 
-## 🚀 Features
+The authentication backend for IAM Playground. Handles user registration, login, and token management.
 
-- **Express.js** - Fast, unopinionated web framework
-- **TypeScript** - Type-safe development
-- **MongoDB** - Database with Mongoose ODM
-- **Winston** - Structured logging with file output
-- **JWT Authentication** - Secure token-based authentication
-- **CORS** - Configurable cross-origin resource sharing
-- **Rate Limiting** - Protection against abuse
-- **Error Handling** - Centralized error management
-- **Environment Validation** - Automatic validation of required variables
-- **Health Checks** - `/health` endpoint for monitoring
+## What this service does
 
-## 📋 Prerequisites
+- User registration and login
+- JWT access tokens + refresh token rotation
+- Social login via Passport.js (Google, GitHub)
+- Passkeys/WebAuthn for passwordless authentication
+- Password reset with token expiration
+- Email verification (mocked for now)
 
-- Node.js 18+ (LTS recommended)
-- pnpm (or npm/yarn)
-- MongoDB (local or Atlas)
+## Stack
 
-## 🛠️ Installation
+Express.js, MongoDB, Mongoose, JWT, Passport.js, Passkeys/WebAuthn, Redis
 
-1. Clone the repository
-2. Install dependencies:
+## Prerequisites
+
+- Node.js 20+
+- pnpm
+- MongoDB (local or Docker)
+- Redis (for sessions)
+
+## Setup
 
 ```bash
+# From monorepo root
 pnpm install
-```
 
-3. Copy `.env.example` to `.env`:
-
-```bash
+# Copy env file
 cp apps/backend/identity-service/.env.example apps/backend/identity-service/.env
+
+# Start MongoDB and Redis
+docker compose up -d
+
+# Run the service
+pnpm identity-service:serve
 ```
 
-4. Update `.env` with your configuration
+## Environment Variables
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create a `.env` file in `apps/backend/identity-service/`:
+Create `.env` in `apps/backend/identity-service/`:
 
 ```env
-# Server Configuration
+# Server
 NODE_ENV=development
 PORT=3010
-HOST=localhost
 
-# CORS Configuration
+# CORS
 CORS_ORIGIN=*
 WHITE_LIST_URLS=http://localhost:3000,http://localhost:3001
 
-# MongoDB Configuration
-# Option 1: MongoDB Atlas (Cloud)
-MONGO_USER=your_username
-MONGO_PASS=your_password
-MONGO_URI=cluster.mongodb.net
+# MongoDB
+MONGO_CONN_STRING=mongodb://localhost:27017/identity
 
-# Option 2: Direct Connection String
-MONGO_CONN_STRING=mongodb://localhost:27017/mydatabase
+# Redis (sessions)
+REDIS_URL=redis://localhost:6379
+
+# JWT
+JWT_SECRET=your-secret-key
+JWT_ACCESS_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=7d
+
+# OAuth (Passport.js)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
 ```
 
-### Required Variables
-
-- **Development**: None (uses defaults)
-- **Production**: MongoDB connection (either `MONGO_CONN_STRING` or `MONGO_USER`/`MONGO_PASS`/`MONGO_URI`)
-
-## 🏃 Running the Application
-
-### Development
+## Scripts
 
 ```bash
-# Using pnpm
-pnpm identity-service:serve
-
-# Or using Nx directly
-nx serve identity-service
+pnpm identity-service:serve      # Dev server
+pnpm identity-service:build      # Build for production
+pnpm identity-service:test       # Run tests
+pnpm identity-service:lint       # Lint
+pnpm identity-service:lint:fix   # Fix lint issues
 ```
 
-### Production
-
-```bash
-# Build first
-pnpm identity-service:build
-
-# Then run
-node dist/apps/backend/identity-service/main.js
-```
-
-## 📝 Available Scripts
-
-### Project-specific scripts
-
-- `pnpm identity-service:serve` - Start development server
-- `pnpm identity-service:build` - Build for production
-- `pnpm identity-service:test` - Run tests
-- `pnpm identity-service:lint` - Lint code
-- `pnpm identity-service:lint:fix` - Fix linting issues
-- `pnpm identity-service:format` - Format code with Prettier
-- `pnpm identity-service:info` - Show project information
-
-### Affected scripts (run on changed projects)
-
-- `pnpm build:affected` - Build affected projects
-- `pnpm test:affected` - Test affected projects
-- `pnpm lint:affected` - Lint affected projects
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 apps/backend/identity-service/
 ├── src/
-│   ├── main.ts                    # Application entry point
-│   ├── configurations/            # Configuration modules
-│   │   ├── index.ts            # Centralized exports
-│   │   ├── configurations.ts     # Environment variables
-│   │   ├── logger-middleware.ts  # Winston logger
-│   │   ├── error-handler-middleware.ts  # Error handling
-│   │   ├── cors-middleware.ts   # CORS configuration
-│   │   ├── mongoose-connection.ts  # MongoDB connection
-│   │   ├── rate-limit-middleware.ts  # Rate limiting
-│   │   └── validate-env.ts      # Environment validation
-│   └── users/                     # User module (to be implemented)
-│       └── routes/
-├── logs/                          # Log files (gitignored)
-│   ├── error.log                 # Error logs only
-│   └── all.log                   # All logs
-├── .env                          # Environment variables (gitignored)
-├── .env.example                  # Environment template
-└── README.md                     # This file
+│   ├── main.ts
+│   ├── app.ts
+│   ├── config/
+│   │   ├── app.config.ts
+│   │   └── mongoose.config.ts
+│   └── auth/
+│       ├── controllers/
+│       │   ├── auth.controller.ts       # login, register, refresh, logout
+│       │   └── profile.controller.ts    # /me endpoints
+│       ├── services/
+│       │   ├── auth.service.ts
+│       │   ├── token.service.ts
+│       │   └── passkey.service.ts
+│       ├── routes/
+│       │   └── auth.routes.ts
+│       ├── strategies/
+│       │   ├── local.strategy.ts
+│       │   ├── google.strategy.ts
+│       │   ├── github.strategy.ts
+│       │   └── passkey.strategy.ts
+│       ├── validators/                  # Zod schemas (input)
+│       │   ├── login.validator.ts
+│       │   ├── register.validator.ts
+│       │   └── index.ts
+│       ├── dto/                         # Response transformation (output)
+│       │   ├── auth.responses.ts
+│       │   ├── user.responses.ts
+│       │   └── index.ts
+│       ├── entities/                    # Pure TypeScript interfaces
+│       │   └── user.entity.ts
+│       ├── models/                      # Mongoose schemas
+│       │   └── user.model.ts
+│       └── mappers/                     # Entity <-> Document conversion
+│           └── user.mapper.ts
+├── .env
+└── README.md
 ```
 
-## 🔒 Security Features
+## API Endpoints
 
-- **Helmet** - Security headers
-- **CORS** - Configurable origin validation
-- **Rate Limiting** - API protection
-  - General API: 100 requests/15min (production)
-  - Auth endpoints: 5 requests/15min
-- **Environment Validation** - Prevents misconfiguration
-- **Error Handling** - No stack traces in production
+### Auth
 
-## 📊 Logging
+```
+POST   /api/v1/auth/register     # Register new user
+POST   /api/v1/auth/login        # Login with email/password
+POST   /api/v1/auth/logout       # Logout (invalidate refresh token)
+POST   /api/v1/auth/refresh      # Refresh access token
+POST   /api/v1/auth/forgot       # Request password reset
+POST   /api/v1/auth/reset        # Reset password with token
+```
 
-Logs are written to:
+### Profile (/me)
 
-- **Console** - Colored output (development)
-- **logs/error.log** - Error level only
-- **logs/all.log** - All log levels
+```
+GET    /api/v1/auth/me           # Get current user profile
+PATCH  /api/v1/auth/me           # Update my profile
+DELETE /api/v1/auth/me           # Delete my account
+```
 
-Log levels:
+### OAuth (Passport.js)
 
-- `error` - Errors only
-- `warn` - Warnings
-- `info` - General information
-- `http` - HTTP requests
-- `debug` - Debug information (development only)
+```
+GET    /api/v1/auth/google            # Google OAuth redirect
+GET    /api/v1/auth/google/callback
+GET    /api/v1/auth/github            # GitHub OAuth redirect
+GET    /api/v1/auth/github/callback
+```
 
-## 🧪 Testing
+### Passkeys (WebAuthn)
+
+```
+POST   /api/v1/auth/passkeys/register/options   # Get registration options
+POST   /api/v1/auth/passkeys/register/verify    # Verify registration
+POST   /api/v1/auth/passkeys/login/options      # Get login options
+POST   /api/v1/auth/passkeys/login/verify       # Verify login
+```
+
+### Health
+
+```
+GET    /health                   # Health check
+```
+
+## Middlewares
+
+Uses shared middlewares from `@backend/express`:
+
+- Rate limiting (100 req/15min general, 5 req/15min for auth)
+- Request validation with Zod
+- CORS with whitelist
+- Helmet for security headers
+- Morgan for HTTP logging
+- Error handling with consistent format
+
+## Testing
 
 ```bash
-# Run all tests
+# Unit tests
 pnpm identity-service:test
 
-# Run tests in watch mode
+# Watch mode
 nx test identity-service --watch
 
-# Run with coverage
+# Coverage
 nx test identity-service --coverage
 ```
 
-## 🏥 Health Check
+## Related
 
-The application exposes a health check endpoint:
-
-```bash
-GET /health
-
-Response:
-{
-  "status": "ok",
-  "environment": "development"
-}
-```
-
-## 🛡️ Error Handling
-
-The application uses a centralized error handler:
-
-```typescript
-import { HttpError } from './configurations';
-
-// Throw custom HTTP errors
-throw new HttpError('User not found', 'The requested user does not exist', 404);
-```
-
-## 📦 Dependencies
-
-### Production
-
-- `express` - Web framework
-- `mongoose` - MongoDB ODM
-- `winston` - Logging
-- `helmet` - Security headers
-- `cors` - CORS middleware
-- `morgan` - HTTP request logger
-- `express-rate-limit` - Rate limiting
-- `dotenv` - Environment variables
-
-### Development
-
-- `typescript` - Type checking
-- `jest` - Testing framework
-- `eslint` - Linting
-- `prettier` - Code formatting
-
-## 🚀 Deployment
-
-### Environment Setup
-
-1. Set `NODE_ENV=production`
-2. Configure MongoDB connection
-3. Set appropriate CORS origins
-4. Configure rate limiting if needed
-
-### Docker (Example)
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
-COPY . .
-RUN pnpm identity-service:build
-EXPOSE 3010
-CMD ["node", "dist/apps/backend/identity-service/main.js"]
-```
-
-## 📚 API Documentation
-
-API documentation will be added as endpoints are implemented.
-
-## 🤝 Contributing
-
-1. Follow the ESLint and Prettier rules
-2. Write tests for new features
-3. Update documentation as needed
-
-## 📄 License
-
-See LICENSE file for details.
+- [Main README](../../../README.md)
+- [ROADMAP](../../../ROADMAP.md) - Phase 1

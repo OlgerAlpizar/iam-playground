@@ -1,74 +1,96 @@
 # IAM Playground
 
-> Full-stack Identity & Access Management showcase: JWT, Passport.js, Passkeys, GraphQL, and real-time notifications — built with Express, NestJS, React, and Next.js.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![Nx](https://img.shields.io/badge/Nx-Monorepo-143055)](https://nx.dev/)
+[![ESLint](https://img.shields.io/badge/ESLint-9.x-4B32C3)](https://eslint.org/)
+[![Prettier](https://img.shields.io/badge/Prettier-2.x-F7B93E)](https://prettier.io/)
+[![Jest](https://img.shields.io/badge/Jest-30.x-C21325)](https://jestjs.io/)
+[![Husky](https://img.shields.io/badge/Husky-9.x-42b983)](https://typicode.github.io/husky/)
+[![pnpm](https://img.shields.io/badge/pnpm-Package%20Manager-F69220)](https://pnpm.io/)
 
-## Table of Contents
+Authentication, authorization, and real-time notifications. Built with Express, NestJS, React, and Next.js.
 
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Development Phases](#development-phases)
-- [License](#license)
+## What is this?
+
+I'm building a complete Identity & Access Management system as a portfolio project. It's my way of showing how I work: writing clean code, thinking about architecture, testing properly, and making decisions I can explain.
+
+The project includes JWT auth, Passport.js, Passkeys, role-based permissions, and real-time events. Multiple services working together, not just isolated examples.
 
 ---
 
-## Overview
+## Why I built it this way
 
-**Identity Playground** is a professional portfolio project demonstrating expertise in modern web development through a complete IAM & Access Management (IAM) system.
+I'd rather have one solid project than ten small ones. A monorepo lets me put everything in one place: clone it, run it, explore it. No repo-hopping.
 
-### Goals
+**Quick disclaimer:** This is a portfolio, not production code. At work I'd probably use one backend framework, add an API Gateway, deploy to real cloud infra. Here I'm mixing stacks on purpose to show range.
 
-- ✅ Clean, professional code
-- ✅ Comprehensive testing (unit, integration, E2E)
-- ✅ Well-thought architecture
-- ✅ Technical decision documentation
-- ✅ CI/CD automation
-- ✅ Multi-stack versatility with purpose
-- ✅ Production-ready mindset
+### Why IAM?
 
-### Services
+Every app needs auth. It's not trivial either: token refresh, multi-device sessions, permission inheritance, all that. Plus IAM naturally breaks into separate services, which gave me an excuse to use different tech for each one.
 
-| Service                    | Description                           | Stack               |
-| -------------------------- | ------------------------------------- | ------------------- |
-| **Identity Service**       | Authentication (JWT, OAuth, Passkeys) | Express + MongoDB   |
-| **Identity UI**            | User-facing login/register            | React               |
-| **Access Control Service** | Roles & permissions management        | NestJS + PostgreSQL |
-| **Access Control UI**      | Admin dashboard                       | Next.js             |
-| **Notification Service**   | Real-time events & background jobs    | Socket.io + BullMQ  |
+### Why Nx monorepo?
+
+Shared JWT validation library across services, single install, consistent config. Nx also knows the dependency graph so it only rebuilds what changed.
+
+### Why mix Express, NestJS, React, Next.js?
+
+| Service          | Stack   | Reason                                      |
+| ---------------- | ------- | ------------------------------------------- |
+| Identity Service | Express | Wanted to build auth from scratch, no magic |
+| Access Control   | NestJS  | Different approach: decorators, DI, GraphQL |
+| Identity UI      | React   | Simple SPA, doesn't need SSR                |
+| Admin UI         | Next.js | Server components, i18n, SSR                |
+
+### Why split auth and authorization?
+
+Different questions: "Who are you?" vs "What can you do?" Easier to reason about when they're separate services.
+
+---
+
+## Services
+
+| Service                    | What it does                                | Stack               |
+| -------------------------- | ------------------------------------------- | ------------------- |
+| **Identity Service**       | Authentication (JWT, Passport.js, Passkeys) | Express + MongoDB   |
+| **Identity UI**            | Login/register frontend                     | React               |
+| **Access Control Service** | Roles & permissions                         | NestJS + PostgreSQL |
+| **Access Control UI**      | Admin dashboard                             | Next.js             |
+| **Notification Service**   | Real-time events, background jobs           | Socket.io + BullMQ  |
 
 ---
 
 ## Tech Stack
 
-| Category          | Technology                 | Service/Use                   | Phase |
-| ----------------- | -------------------------- | ----------------------------- | ----- |
-| **Backend**       | Express.js                 | Identity Service              | 1     |
-|                   | NestJS                     | Access Control Service        | 4     |
-| **Frontend**      | React                      | Identity UI                   | 2     |
-|                   | Next.js                    | Access Control UI             | 5     |
-| **API**           | REST                       | Identity Service              | 1     |
-|                   | GraphQL                    | Access Control Service        | 4     |
-| **Auth**          | JWT + Refresh Tokens       | Token-based auth              | 1     |
-|                   | Passport.js                | Social login (Google, GitHub) | 1     |
-|                   | Passkeys/WebAuthn          | Passwordless authentication   | 1     |
-| **Databases**     | MongoDB + Mongoose         | Identity Service              | 1     |
-|                   | PostgreSQL + Prisma        | Access Control Service        | 4     |
-|                   | Redis                      | Sessions, Cache, Queue        | 1, 6  |
-| **Real-time**     | Socket.io                  | Notification Service          | 6     |
-| **Message Queue** | BullMQ                     | Event-driven jobs             | 6     |
-| **Testing**       | Jest                       | Unit + Integration            | 1-7   |
-|                   | Playwright                 | E2E                           | 7     |
-| **CI/CD**         | GitHub Actions             | Automation                    | 3     |
-| **Containers**    | Docker + Compose           | Development environment       | 3     |
-| **API Docs**      | Swagger/OpenAPI            | Documentation                 | 3     |
-| **Tracing**       | Jaeger + OpenTelemetry     | Distributed tracing           | 7     |
-| **Logging**       | Winston                    | Structured logging            | 7     |
-| **i18n**          | next-intl                  | Access Control UI (ES/EN)     | 5     |
-| **Monorepo**      | Nx                         | Workspace management          | 1     |
-| **Shared Libs**   | @identity/token-validation | JWT validation shared lib     | 3     |
-| **Language**      | TypeScript                 | Entire project                | 1-7   |
+> **Note:** Not everything goes everywhere. Each technology is used in specific services where it makes sense. In a real project you wouldn't need all of this; a single backend framework and database would probably do. Here I'm intentionally using variety to show I can work with different tools.
+
+| Category          | Technology                 | Service/Use                   |
+| ----------------- | -------------------------- | ----------------------------- |
+| **Backend**       | Express.js                 | Identity Service              |
+|                   | NestJS                     | Access Control Service        |
+| **Frontend**      | React                      | Identity UI                   |
+|                   | Next.js                    | Access Control UI             |
+| **API**           | REST                       | Identity Service              |
+|                   | GraphQL                    | Access Control Service        |
+| **Auth**          | JWT + Refresh Tokens       | Token-based auth              |
+|                   | Passport.js                | Social login (Google, GitHub) |
+|                   | Passkeys/WebAuthn          | Passwordless authentication   |
+| **Databases**     | MongoDB + Mongoose         | Identity Service              |
+|                   | PostgreSQL + Prisma        | Access Control Service        |
+|                   | Redis                      | Sessions, Cache, Queue        |
+| **Real-time**     | Socket.io                  | Notification Service          |
+| **Message Queue** | BullMQ                     | Event-driven jobs             |
+| **Testing**       | Jest                       | Unit + Integration            |
+|                   | Playwright                 | E2E                           |
+| **CI/CD**         | GitHub Actions             | Automation                    |
+| **Containers**    | Docker + Compose           | Development environment       |
+| **API Docs**      | Swagger/OpenAPI            | Documentation                 |
+| **Tracing**       | Jaeger + OpenTelemetry     | Distributed tracing           |
+| **Logging**       | Winston                    | Structured logging            |
+| **i18n**          | next-intl                  | Access Control UI (ES/EN)     |
+| **Monorepo**      | Nx                         | Workspace management          |
+| **Shared Libs**   | @identity/token-validation | JWT validation shared lib     |
+| **Language**      | TypeScript                 | Entire project                |
 
 ---
 
@@ -77,109 +99,81 @@
 ### System Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────┐
 │                              IAM-PLAYGROUND                                  │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                   │
-│         USERS                                          ADMINISTRATORS             │
-│           │                                                  │                    │
-│           ▼                                                  ▼                    │
-│    ┌─────────────────┐                          ┌─────────────────────┐          │
-│    │   Identity UI   │                          │  Access Control UI  │          │
-│    │     (React)     │                          │      (Next.js)      │          │
-│    └────────┬────────┘                          └──────────┬──────────┘          │
-│             │                                              │                      │
-│             │  REST                                        │  GraphQL             │
-│             ▼                                              ▼                      │
-│    ┌─────────────────┐                          ┌─────────────────────┐          │
-│    │Identity Service │                          │Access Control Service│          │
-│    │   (Express)     │◄──────── Redis ─────────►│      (NestJS)       │          │
-│    │   (Mongoose)    │       (sessions)         │      (Prisma)       │          │
-│    └────────┬────────┘                          └──────────┬──────────┘          │
-│             │                                              │                      │
-│             │             ┌────────────────────┐           │                      │
-│             │             │ Notification Service│           │                      │
-│             └────────────►│    (Socket.io)     │◄──────────┘                      │
-│                           │     (BullMQ)       │                                  │
-│                           └─────────┬──────────┘                                  │
-│                                     │                                             │
-│                ┌────────────────────┼────────────────────┐                       │
-│                ▼                    ▼                    ▼                       │
-│           ┌─────────┐         ┌──────────┐         ┌─────────┐                   │
-│           │ MongoDB │         │PostgreSQL│         │  Redis  │                   │
-│           └─────────┘         └──────────┘         └─────────┘                   │
-│                                                                                   │
-│  ═══════════════════════════════════════════════════════════════════════════════ │
-│                               INFRASTRUCTURE                                      │
-│  ═══════════════════════════════════════════════════════════════════════════════ │
-│                                                                                   │
-│    ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
-│    │  Docker  │  │  GitHub  │  │  Swagger │  │  Jaeger  │  │  Winston │         │
-│    │  Compose │  │  Actions │  │ API Docs │  │  Tracing │  │  Logging │         │
-│    └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘         │
-│                                                                                   │
-└──────────────────────────────────────────────────────────────────────────────────┘
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│       USERS                                          ADMINISTRATORS          │
+│         │                                                  │                 │
+│         ▼                                                  ▼                 │
+│  ┌─────────────────┐                          ┌─────────────────────┐        │
+│  │   Identity UI   │                          │  Access Control UI  │        │
+│  │     (React)     │                          │      (Next.js)      │        │
+│  └────────┬────────┘                          └──────────┬──────────┘        │
+│           │                                              │                   │
+│           │  REST                                        │  GraphQL          │
+│           ▼                                              ▼                   │
+│  ┌─────────────────┐                          ┌─────────────────────┐        │
+│  │Identity Service │                          │Access Control Service│       │
+│  │   (Express)     │◄──────── Redis ─────────►│      (NestJS)       │        │
+│  └────────┬────────┘                          └──────────┬──────────┘        │
+│           │                                              │                   │
+│           │             ┌────────────────────┐           │                   │
+│           └────────────►│ Notification Service│◄──────────┘                  │
+│                         │  (Socket.io/BullMQ) │                              │
+│                         └─────────┬──────────┘                               │
+│                                   │                                          │
+│              ┌────────────────────┼────────────────────┐                     │
+│              ▼                    ▼                    ▼                     │
+│         ┌─────────┐         ┌──────────┐         ┌─────────┐                 │
+│         │ MongoDB │         │PostgreSQL│         │  Redis  │                 │
+│         └─────────┘         └──────────┘         └─────────┘                 │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Service Communication
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           INTERNAL COMMUNICATION FLOW                             │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                   │
-│   ┌───────────────────────────────────────────────────────────────────────────┐  │
-│   │                @identity/token-validation (Nx shared lib)                 │  │
-│   │   • JWT_SECRET from env vars                                              │  │
-│   │   • validateToken() middleware                                            │  │
-│   │   • extractUserFromToken() utility                                        │  │
-│   │   • Token types (access, refresh)                                         │  │
-│   └───────────────────────────────────────────────────────────────────────────┘  │
-│                                  │                                                │
-│                ┌─────────────────┼─────────────────┐                             │
-│                ▼                 ▼                 ▼                             │
-│        ┌──────────────┐  ┌────────────────┐  ┌──────────────┐                   │
-│        │   Identity   │  │ Access Control │  │ Notification │                   │
-│        │   Service    │  │    Service     │  │   Service    │                   │
-│        │  (generates) │  │   (validates   │  │  (validates) │                   │
-│        │              │  │  + permissions)│  │              │                   │
-│        └──────────────┘  └────────────────┘  └──────────────┘                   │
-│                                                                                   │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│  STRATEGY:                                                                        │
-│  • Shared lib: each service validates tokens independently                       │
-│  • Identity Service: generates tokens (access + refresh)                         │
-│  • Access Control Service: validates tokens + resolves permissions               │
-│  • No API Gateway: simplicity for portfolio (production would use one)           │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Authentication vs Authorization
-
-| Service                    | Responsibility                  |
-| -------------------------- | ------------------------------- |
-| **Identity Service**       | Authentication: WHO are you?    |
-| **Access Control Service** | Authorization: WHAT can you do? |
+### Auth Flow
 
 ```
 ┌──────────┐      ┌──────────────────┐      ┌───────────────────────┐
 │    UI    │      │ Identity Service │      │ Access Control Service│
-│          │      │    (Express)     │      │       (NestJS)        │
 └────┬─────┘      └────────┬─────────┘      └───────────┬───────────┘
      │                     │                            │
-     │  1. Login (JWT, Passport.js, or Passkeys)        │
+     │  1. Login           │                            │
      │────────────────────►│                            │
      │                     │                            │
-     │  2. Token (identity: userId, email)              │
+     │  2. JWT token       │                            │
      │◄────────────────────│                            │
      │                     │                            │
-     │  3. What permissions does userId have?           │
+     │  3. What can this user do?                       │
      │──────────────────────────────────────────────────►
      │                     │                            │
      │  4. { roles, permissions }                       │
      │◄──────────────────────────────────────────────────
-     │                     │                            │
 ```
+
+### Service Communication
+
+All services validate tokens independently using a shared Nx library:
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│            @identity/token-validation (Nx shared lib)             │
+│   • JWT_SECRET from env vars                                      │
+│   • validateToken() middleware                                    │
+│   • extractUserFromToken() utility                                │
+└───────────────────────────────────────────────────────────────────┘
+                               │
+             ┌─────────────────┼─────────────────┐
+             ▼                 ▼                 ▼
+      ┌─────────────┐  ┌──────────────┐  ┌─────────────┐
+      │  Identity   │  │Access Control│  │Notification │
+      │  Service    │  │   Service    │  │  Service    │
+      │ (generates) │  │ (validates)  │  │ (validates) │
+      └─────────────┘  └──────────────┘  └─────────────┘
+```
+
+No API Gateway here. Each service handles its own validation. In production I'd add one, but for this portfolio it keeps things simpler.
 
 ---
 
@@ -189,33 +183,31 @@
 
 - Node.js 20+
 - Docker & Docker Compose
-- pnpm (recommended)
+- pnpm
 
 ### Installation
 
 ```bash
-# Clone the repository
-git https://github.com/OlgerAlpizar/iam-playground.git
+git clone https://github.com/OlgerAlpizar/iam-playground.git
 cd iam-playground
 
-# Install dependencies
 pnpm install
 
-# Start infrastructure (databases)
+# Start databases
 docker compose up -d
 
-# Run development servers
+# Run dev servers
 pnpm dev
 ```
 
-### Available Scripts
+### Scripts
 
 ```bash
-pnpm dev          # Start all services in development mode
-pnpm build        # Build all services
-pnpm test         # Run unit tests
-pnpm test:e2e     # Run E2E tests
-pnpm lint         # Lint all projects
+pnpm dev        # Start all services
+pnpm build      # Build everything
+pnpm test       # Run unit tests
+pnpm test:e2e   # Run E2E tests
+pnpm lint       # Lint all projects
 ```
 
 ---
@@ -232,10 +224,10 @@ iam-playground/
 │   ├── frontend/
 │   │   ├── identity-ui/            # React
 │   │   └── access-control-ui/      # Next.js
-│   └── e2e/                        # Playwright E2E tests
+│   └── e2e/                        # Playwright tests
 ├── libs/
-│   └── identity/
-│       └── token-validation/       # Shared JWT validation lib
+│   └── shared/
+│       └── token-validation/       # JWT validation lib
 ├── docker-compose.yml
 ├── nx.json
 └── package.json
@@ -243,144 +235,14 @@ iam-playground/
 
 ---
 
-## Development Phases
+## Status
 
-### Phase 1: Identity Service
+Currently working on **Phase 1: Identity Service** — building the authentication backend with Express, JWT, Passport.js, and Passkeys.
 
-- [x] In Progress
-- [ ] Completed
-
-**Goal:** Functional authentication backend
-
-**Stack:** `Express.js` `REST` `MongoDB` `Mongoose` `JWT` `Passport.js` `Passkeys/WebAuthn` `Redis` `TypeScript`
-
-**Features:**
-
-- Register / Login / Logout
-- JWT with Refresh Tokens
-- Passport.js (Google, GitHub)
-- Passkeys / WebAuthn (passwordless)
-- Password Reset
-- Email verification (mock)
-
----
-
-### Phase 2: Identity UI
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** User-facing frontend
-
-**Stack:** `React` `TypeScript` `TailwindCSS` `React Query` `Zustand`
-
-**Features:**
-
-- Login / Register forms
-- Social login buttons (Google, GitHub)
-- Passkeys registration + login UI
-- Profile page
-- Password reset flow
-
----
-
-### Phase 3: Infrastructure
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** Production-ready setup + shared libs
-
-**Stack:** `Docker` `Docker Compose` `GitHub Actions` `Swagger/OpenAPI` `@identity/token-validation`
-
-**Features:**
-
-- Dockerfile for each service
-- docker-compose.yml (dev environment)
-- GitHub Actions (lint, test, build)
-- Swagger docs for Identity Service
-- Shared lib for JWT validation across services
-
----
-
-### Phase 4: Access Control Service
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** Roles & permissions backend
-
-**Stack:** `NestJS` `GraphQL` `PostgreSQL` `Prisma` `TypeScript`
-
-**Features:**
-
-- CRUD Roles
-- CRUD Permissions
-- Policies (role → permissions)
-- Query: "Can user X do Y on resource Z?"
-- Integration with Identity Service
-
----
-
-### Phase 5: Access Control UI
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** Admin dashboard
-
-**Stack:** `Next.js` `GraphQL client` `TailwindCSS` `next-intl` `TypeScript`
-
-**Features:**
-
-- Dashboard overview
-- User management
-- Role/permission management
-- Activity logs
-- SSR for better performance
-- Internationalization (ES/EN)
-- Language switcher
-
----
-
-### Phase 6: Notification Service
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** Event-driven + Real-time
-
-**Stack:** `Socket.io` `BullMQ` `Redis` `TypeScript`
-
-**Features:**
-
-- WebSocket connections
-- Real-time notifications
-- Background jobs (BullMQ)
-- Event bus between services
-- Retry logic for failed jobs
-
----
-
-### Phase 7: Observability + E2E
-
-- [ ] In Progress
-- [ ] Completed
-
-**Goal:** Tracing and end-to-end testing (all runs locally with Docker)
-
-**Stack:** `Jaeger` `OpenTelemetry` `Winston` `Playwright`
-
-**Features:**
-
-- Jaeger UI for trace visualization (Docker)
-- OpenTelemetry SDK in all services
-- Structured logging with Winston
-- Health check endpoints
-- **E2E Global:** Single Playwright project testing both UIs
+See [ROADMAP.md](./ROADMAP.md) for the full development plan.
 
 ---
 
 ## License
 
-MIT © [Olger Alpizar]
+MIT © [Olger Alpizar](https://github.com/olger-alpizar)
