@@ -1,0 +1,26 @@
+{
+  "name": "backend-utils",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/utils/src",
+  "projectType": "library",
+  "tags": ["scope:backend", "type:library"],
+  "implicitDependencies": ["backend-utils"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/utils",
+        "main": "libs/backend/utils/src/index.ts",
+        "tsConfig": "libs/backend/utils/tsconfig.lib.json",
+        "assets": []
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "libs/backend/utils/jest.config.ts"
+      }
+    }
+  }
+}

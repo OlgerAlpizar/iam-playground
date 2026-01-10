@@ -1,0 +1,26 @@
+{
+  "name": "backend-express",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/express/src",
+  "projectType": "library",
+  "tags": ["scope:backend", "type:library"],
+  "implicitDependencies": ["backend-utils"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/express",
+        "main": "libs/backend/express/src/index.ts",
+        "tsConfig": "libs/backend/express/tsconfig.lib.json",
+        "assets": ["libs/backend/express/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "libs/backend/express/jest.config.ts"
+      }
+    }
+  }
+}

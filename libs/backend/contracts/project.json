@@ -1,0 +1,29 @@
+{
+  "name": "backend-contracts",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/contracts/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/contracts",
+        "main": "libs/backend/contracts/src/index.ts",
+        "tsConfig": "libs/backend/contracts/tsconfig.lib.json",
+        "assets": ["libs/backend/contracts/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/backend/contracts/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:backend", "type:contracts"]
+}

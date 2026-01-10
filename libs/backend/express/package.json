@@ -1,0 +1,25 @@
+{
+  "name": "@authentication/backend-express",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "exports": {
+    "./middlewares": {
+      "import": "./src/middlewares/index.js",
+      "require": "./src/middlewares/index.js",
+      "types": "./src/middlewares/index.d.ts"
+    },
+    "./utils": {
+      "import": "./src/utils/index.js",
+      "require": "./src/utils/index.js",
+      "types": "./src/utils/index.d.ts"
+    },
+    "./types": {
+      "import": "./src/types/index.js",
+      "require": "./src/types/index.js",
+      "types": "./src/types/index.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "express": "^4.21.2"
+  }
+}
