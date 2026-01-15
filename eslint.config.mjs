@@ -82,6 +82,11 @@ export default [
       '@typescript-eslint/naming-convention': [
         'error',
         {
+          selector: 'variable',
+          modifiers: ['const', 'exported'],
+          format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
+        },
+        {
           selector: 'variableLike',
           format: ['camelCase', 'UPPER_CASE'],
           leadingUnderscore: 'allow',
