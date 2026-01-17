@@ -1,13 +1,12 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
 
+import { type OAuthProvider, OAuthProviderType } from '../entities/oauth-provider.entity';
 import {
-  type OAuthProvider,
-  OAuthProviderType,
   type PasskeyCredential,
   PasskeyDeviceType,
   PasskeyTransport,
-  type User,
-} from '../entities';
+} from '../entities/passkey-credential.entity';
+import type { User } from '../entities/user.entity';
 
 const oAuthProviderSchema = new Schema<OAuthProvider>(
   {
@@ -190,6 +189,11 @@ const userSchema = new Schema<UserDocument>(
 
 userSchema.index({ 'oauthProviders.provider': 1, 'oauthProviders.providerId': 1 });
 userSchema.index({ 'passkeys.credentialId': 1 });
+
+userSchema.index(
+  { email: 'text', displayName: 'text', firstName: 'text', lastName: 'text' },
+  { weights: { email: 10, displayName: 5, firstName: 3, lastName: 3 }, name: 'user_text_search' },
+);
 
 export interface UserDocument extends Document, Omit<User, 'id'> {
   passwordHash?: string;

@@ -2,7 +2,12 @@ import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { HttpError } from '../error-handler/http-error';
-import { requestValidation } from './request-validation.middleware';
+import {
+  validate,
+  validateBody,
+  validateParams,
+  validateQuery,
+} from './request-validation.middleware';
 
 type MockNextFunction = jest.Mock<void, [Error?]> & NextFunction;
 
@@ -24,7 +29,7 @@ describe('Request Validation Middleware', () => {
     describe('body validation', () => {
       it('validates and passes valid body data', () => {
         const schema = z.object({ name: z.string(), age: z.number() });
-        const middleware = requestValidation.createMiddleware({ body: schema });
+        const middleware = validateBody(schema);
         const req = createMockRequest({ body: { name: 'John', age: 30 } });
         const next = createMockNext();
 
@@ -36,7 +41,7 @@ describe('Request Validation Middleware', () => {
 
       it('throws HttpError 400 on validation failure', () => {
         const schema = z.object({ name: z.string(), age: z.number() });
-        const middleware = requestValidation.createMiddleware({ body: schema });
+        const middleware = validateBody(schema);
         const req = createMockRequest({ body: { name: 'John', age: 'invalid' } });
         const next = createMockNext();
 
@@ -50,7 +55,7 @@ describe('Request Validation Middleware', () => {
 
       it('includes field name in validation error details', () => {
         const schema = z.object({ email: z.string().email() });
-        const middleware = requestValidation.createMiddleware({ body: schema });
+        const middleware = validateBody(schema);
         const req = createMockRequest({ body: { email: 'invalid' } });
         const next = createMockNext();
 
@@ -63,7 +68,7 @@ describe('Request Validation Middleware', () => {
     describe('query validation', () => {
       it('validates query parameters', () => {
         const schema = z.object({ page: z.string(), limit: z.string() });
-        const middleware = requestValidation.createMiddleware({ query: schema });
+        const middleware = validateQuery(schema);
         const req = createMockRequest({ query: { page: '1', limit: '10' } });
         const next = createMockNext();
 
@@ -77,7 +82,7 @@ describe('Request Validation Middleware', () => {
     describe('params validation', () => {
       it('validates route parameters', () => {
         const schema = z.object({ id: z.string() });
-        const middleware = requestValidation.createMiddleware({ params: schema });
+        const middleware = validateParams(schema);
         const req = createMockRequest({ params: { id: '123' } });
         const next = createMockNext();
 
@@ -89,7 +94,7 @@ describe('Request Validation Middleware', () => {
 
     describe('combined validation', () => {
       it('validates body, query, and params simultaneously', () => {
-        const middleware = requestValidation.createMiddleware({
+        const middleware = validate({
           body: z.object({ name: z.string() }),
           query: z.object({ page: z.string() }),
           params: z.object({ id: z.string() }),
@@ -107,7 +112,7 @@ describe('Request Validation Middleware', () => {
       });
 
       it('passes through when no schemas provided', () => {
-        const middleware = requestValidation.createMiddleware({});
+        const middleware = validate({});
         const req = createMockRequest({ body: { anything: 'goes' } });
         const next = createMockNext();
 
@@ -124,7 +129,7 @@ describe('Request Validation Middleware', () => {
           tags: z.array(z.string()),
           role: z.string().default('user'),
         });
-        const middleware = requestValidation.createMiddleware({ body: schema });
+        const middleware = validateBody(schema);
         const req = createMockRequest({
           body: {
             user: { name: 'John', email: 'john@example.com' },
@@ -145,7 +150,7 @@ describe('Request Validation Middleware', () => {
             throw new Error('Generic error');
           },
         } as unknown as z.ZodSchema;
-        const middleware = requestValidation.createMiddleware({ body: badSchema });
+        const middleware = validateBody(badSchema);
         const next = createMockNext();
 
         middleware(createMockRequest(), createMockResponse(), next);

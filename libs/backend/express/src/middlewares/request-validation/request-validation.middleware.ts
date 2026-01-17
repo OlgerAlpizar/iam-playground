@@ -9,16 +9,26 @@ type ValidationOptions = {
   params?: ZodSchema;
 };
 
+const handleValidationError = (error: unknown, next: NextFunction): void => {
+  if ((error as ZodError).issues) {
+    const zodError = error as ZodError;
+    const details = zodError.errors
+      .map((err) => `${err.path.join('.')}: ${err.message}`)
+      .join(', ');
+    return next(new HttpError('Validation error', details, 400));
+  }
+  next(error);
+};
+
 /**
- * Creates a validation middleware using Zod schemas.
- * Validates request body, query, or params based on the provided schema.
+ * Validates request body, query, or params using Zod schemas.
  * @param options - Validation options
  * @property {ZodSchema} body - Schema for request body validation
  * @property {ZodSchema} query - Schema for query parameters validation
  * @property {ZodSchema} params - Schema for route params validation
  * @returns Middleware
  */
-const createMiddleware = (options: ValidationOptions): RequestHandler => {
+export const validate = (options: ValidationOptions): RequestHandler => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (options.body) {
@@ -32,19 +42,35 @@ const createMiddleware = (options: ValidationOptions): RequestHandler => {
       }
       next();
     } catch (error) {
-      if ((error as ZodError).issues) {
-        const zodError = error as ZodError;
-        const details = zodError.errors
-          .map((err) => `${err.path.join('.')}: ${err.message}`)
-          .join(', ');
-        const validationError = new HttpError('Validation error', details, 400);
-        return next(validationError);
-      }
-      next(error);
+      handleValidationError(error, next);
     }
   };
 };
 
+/**
+ * Validates request body using a Zod schema.
+ * @param schema - Zod schema for body validation
+ * @returns Middleware
+ */
+export const validateBody = (schema: ZodSchema): RequestHandler => validate({ body: schema });
+
+/**
+ * Validates query parameters using a Zod schema.
+ * @param schema - Zod schema for query validation
+ * @returns Middleware
+ */
+export const validateQuery = (schema: ZodSchema): RequestHandler => validate({ query: schema });
+
+/**
+ * Validates route params using a Zod schema.
+ * @param schema - Zod schema for params validation
+ * @returns Middleware
+ */
+export const validateParams = (schema: ZodSchema): RequestHandler => validate({ params: schema });
+
 export const requestValidation = {
-  createMiddleware,
-} as const;
+  validate,
+  validateBody,
+  validateQuery,
+  validateParams,
+};

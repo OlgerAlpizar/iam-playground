@@ -4,6 +4,7 @@ import type { PasskeyCredential } from './passkey-credential.entity';
 export interface User {
   id: string;
   email: string;
+  passwordHash?: string;
   isEmailVerified: boolean;
   displayName?: string;
   firstName?: string;
