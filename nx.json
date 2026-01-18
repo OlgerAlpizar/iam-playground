@@ -36,7 +36,7 @@
       "exclude": [
         "apps/apis-e2e/**/*",
         "apps/apis/apps/apis-e2e/**/*",
-        "apps/backend/identity-service-e2e/**/*"
+        "apps/backend/iam-provider-e2e/**/*"
       ]
     }
   ]

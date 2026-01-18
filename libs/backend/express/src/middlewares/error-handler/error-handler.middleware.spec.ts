@@ -114,6 +114,21 @@ describe('Error Handler Middleware', () => {
         );
       });
 
+      it('does not handle SyntaxError without body property', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new SyntaxError('Some other syntax error');
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Some other syntax error',
+            statusCode: 500,
+          }),
+        );
+      });
+
       it('handles payload too large as 413', () => {
         const handler = errorHandler.createMiddleware({ logger: mockLogger });
         const error = new Error('Payload too large');
@@ -146,6 +161,202 @@ describe('Error Handler Middleware', () => {
           }),
         );
         expect(mockLogger.error).toHaveBeenCalledWith('Payload too large: exceeds unknown');
+      });
+    });
+
+    describe('domain error handling', () => {
+      const domainErrorMap = {
+        USER_NOT_FOUND: { statusCode: 404, message: 'User not found' },
+        DUPLICATE_EMAIL: { statusCode: 409, message: 'Email already registered' },
+      };
+
+      it('handles domain error when code matches mapping', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('User with id 123 not found') as Error & { code: string };
+        error.code = 'USER_NOT_FOUND';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'User not found',
+            details: 'User with id 123 not found',
+            statusCode: 404,
+            code: 'USER_NOT_FOUND',
+          }),
+        );
+        expect(mockLogger.error).toHaveBeenCalledWith('User not found: User with id 123 not found');
+      });
+
+      it('handles different domain error codes correctly', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('test@example.com') as Error & { code: string };
+        error.code = 'DUPLICATE_EMAIL';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Email already registered',
+            code: 'DUPLICATE_EMAIL',
+          }),
+        );
+      });
+
+      it('falls through when domainErrorMap is not provided', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Some error') as Error & { code: string };
+        error.code = 'USER_NOT_FOUND';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+      });
+
+      it('falls through when error has no code', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('Error without code');
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+      });
+
+      it('falls through when error code is not in mapping', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('Unknown error') as Error & { code: string };
+        error.code = 'UNKNOWN_ERROR_CODE';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+      });
+
+      it('excludes stack trace for domain error in production', () => {
+        mockEnvironment.isProduction.mockReturnValueOnce(true);
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('User not found') as Error & { code: string };
+        error.code = 'USER_NOT_FOUND';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        const calls = jsonMock.mock.calls as Array<[{ stack?: string }]>;
+        const response = calls[0][0];
+        expect(response.stack).toBeUndefined();
+      });
+
+      it('includes stack trace for domain error in development', () => {
+        mockEnvironment.isProduction.mockReturnValueOnce(false);
+        const handler = errorHandler.createMiddleware({ logger: mockLogger, domainErrorMap });
+        const error = new Error('User not found') as Error & { code: string };
+        error.code = 'USER_NOT_FOUND';
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        const calls = jsonMock.mock.calls as Array<[{ stack?: string }]>;
+        const response = calls[0][0];
+        expect(response.stack).toBeDefined();
+      });
+    });
+
+    describe('MongoDB error handling', () => {
+      it('handles MongoDB duplicate key error (code 11000)', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Duplicate key') as Error & {
+          code: number;
+          keyPattern: Record<string, unknown>;
+          keyValue: Record<string, unknown>;
+        };
+        error.code = 11000;
+        error.keyPattern = { email: 1 };
+        error.keyValue = { email: 'test@example.com' };
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Duplicate entry',
+            details: 'A record with this email already exists',
+            statusCode: 409,
+            code: 'DUPLICATE_KEY',
+          }),
+        );
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Duplicate key error: email=test@example.com',
+        );
+      });
+
+      it('handles MongoDB duplicate key error without keyPattern', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Duplicate key') as Error & {
+          code: number;
+          keyValue: Record<string, unknown>;
+        };
+        error.code = 11000;
+        error.keyValue = { email: 'test@example.com' };
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            details: 'A record with this field already exists',
+          }),
+        );
+      });
+
+      it('handles MongoDB duplicate key error without keyValue', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Duplicate key') as Error & {
+          code: number;
+          keyPattern: Record<string, unknown>;
+        };
+        error.code = 11000;
+        error.keyPattern = { username: 1 };
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(409);
+        expect(mockLogger.error).toHaveBeenCalledWith('Duplicate key error: username=unknown');
+      });
+
+      it('does not handle non-11000 MongoDB errors', () => {
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Some other mongo error') as Error & { code: number };
+        error.code = 12345;
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+      });
+
+      it('excludes stack trace for MongoDB error in production', () => {
+        mockEnvironment.isProduction.mockReturnValueOnce(true);
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Duplicate key') as Error & { code: number };
+        error.code = 11000;
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        const calls = jsonMock.mock.calls as Array<[{ stack?: string }]>;
+        const response = calls[0][0];
+        expect(response.stack).toBeUndefined();
+      });
+
+      it('includes stack trace for MongoDB error in development', () => {
+        mockEnvironment.isProduction.mockReturnValueOnce(false);
+        const handler = errorHandler.createMiddleware({ logger: mockLogger });
+        const error = new Error('Duplicate key') as Error & { code: number };
+        error.code = 11000;
+
+        handler(error, {} as Request, mockResponse as Response, mockNext);
+
+        const calls = jsonMock.mock.calls as Array<[{ stack?: string }]>;
+        const response = calls[0][0];
+        expect(response.stack).toBeDefined();
       });
     });
 

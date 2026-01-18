@@ -100,27 +100,27 @@ Endpoints to be exposed for internal service-to-service communication:
 ## Implementation Checklist
 
 - [ ] Create `apps/backend/api-gateway/` project
-- [ ] Implement routing to identity-service
+- [ ] Implement routing to iam-provider
 - [ ] Implement routing to user-management (when created)
 - [ ] Add JWT validation middleware
 - [ ] Add rate limiting
 - [ ] Add request logging
 - [ ] Implement service-to-service authentication
-- [ ] Add internal endpoints to identity-service
+- [ ] Add internal endpoints to iam-provider
 - [ ] Document API routes
 
 ## Example Gateway Routes
 
 ```typescript
 // External routes (through gateway)
-POST   /api/v1/auth/login          → identity-service
-POST   /api/v1/auth/register       → identity-service
-POST   /api/v1/auth/refresh        → identity-service
+POST   /api/v1/auth/login          → iam-provider
+POST   /api/v1/auth/register       → iam-provider
+POST   /api/v1/auth/refresh        → iam-provider
 GET    /api/v1/users/:id/profile   → user-management
 PUT    /api/v1/users/:id/roles     → user-management
 
 // Internal routes (service-to-service only)
-GET    /internal/users/:id         → identity-service (not exposed via gateway)
+GET    /internal/users/:id         → iam-provider (not exposed via gateway)
 ```
 
 ## References

@@ -4,9 +4,14 @@ import type { ErrorRequestHandler, NextFunction, Request, Response } from 'expre
 
 import { HttpError } from './http-error';
 
+type DomainAsHttpError = { statusCode: number; message: string };
+
 type ErrorHandlerOptions = {
   logger: LoggerInterface;
+  domainErrorMap?: Record<string, DomainAsHttpError>;
 };
+
+type DomainError = Error & { code?: string };
 
 const handleJsonSyntaxError = (
   error: SyntaxError & { body?: unknown },
@@ -73,6 +78,67 @@ const handleTimeoutError = (req: Request, logger: LoggerInterface, res: Response
   return true;
 };
 
+const handleDomainError = (
+  error: DomainError,
+  logger: LoggerInterface,
+  res: Response,
+  domainErrorMap?: Record<string, DomainAsHttpError>,
+): boolean => {
+  if (!domainErrorMap) {
+    return false;
+  }
+
+  const errorCode = error.code;
+  if (!errorCode || !domainErrorMap[errorCode]) {
+    return false;
+  }
+
+  const { statusCode, message } = domainErrorMap[errorCode];
+  const isProduction = environment.isProduction();
+
+  logger.error(`${message}: ${error.message}`);
+
+  res.status(statusCode).json({
+    message,
+    details: error.message,
+    statusCode,
+    code: errorCode,
+    ...(!isProduction && { stack: error.stack }),
+  });
+
+  return true;
+};
+
+const handleMongoError = (
+  error: Error & {
+    code?: number;
+    keyPattern?: Record<string, unknown>;
+    keyValue?: Record<string, unknown>;
+  },
+  logger: LoggerInterface,
+  res: Response,
+): boolean => {
+  if (error.code !== 11000) {
+    return false;
+  }
+
+  const field = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'field';
+  const value = error.keyValue ? Object.values(error.keyValue)[0] : 'unknown';
+  const isProduction = environment.isProduction();
+
+  logger.error(`Duplicate key error: ${field}=${value}`);
+
+  res.status(409).json({
+    message: 'Duplicate entry',
+    details: `A record with this ${field} already exists`,
+    statusCode: 409,
+    code: 'DUPLICATE_KEY',
+    ...(!isProduction && { stack: error.stack }),
+  });
+
+  return true;
+};
+
 const handleApplicationError = (
   error: HttpError | Error,
   logger: LoggerInterface,
@@ -125,9 +191,29 @@ const createMiddleware = (options: ErrorHandlerOptions): ErrorRequestHandler => 
       return;
     }
 
+    if (handleDomainError(error as DomainError, options.logger, res, options.domainErrorMap)) {
+      return;
+    }
+
+    if (
+      handleMongoError(
+        error as Error & {
+          code?: number;
+          keyPattern?: Record<string, unknown>;
+          keyValue?: Record<string, unknown>;
+        },
+        options.logger,
+        res,
+      )
+    ) {
+      return;
+    }
+
     handleApplicationError(error, options.logger, res);
   };
 };
+
+export type { DomainAsHttpError };
 
 export const errorHandler = {
   createMiddleware,
