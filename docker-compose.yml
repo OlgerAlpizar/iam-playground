@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # MongoDB - Main database
+  mongodb:
+    image: mongo:7
+    container_name: iam-mongodb
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: iam_provider
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - iam-network
+
+  # Mailhog - Email testing (captures all outgoing emails)
+  # Access UI at: http://localhost:8025
+  # SMTP server at: localhost:1025
+  mailhog:
+    image: mailhog/mailhog
+    container_name: iam-mailhog
+    ports:
+      - '1025:1025' # SMTP server
+      - '8025:8025' # Web UI
+    networks:
+      - iam-network
+
+  # Redis - Session/challenge store
+  # Connection: redis://localhost:6379
+  redis:
+    image: redis:7-alpine
+    container_name: iam-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - iam-network
+
+volumes:
+  redis_data:
+  mongodb_data:
+
+networks:
+  iam-network:
+    driver: bridge

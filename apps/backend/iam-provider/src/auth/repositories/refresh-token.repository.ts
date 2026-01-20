@@ -17,24 +17,10 @@ const findRefreshTokensByUserId = async (userId: string): Promise<RefreshToken[]
   return docs.map(refreshTokenFromDocument);
 };
 
-const findRefreshTokensByFamily = async (family: string): Promise<RefreshToken[]> => {
-  const docs = await RefreshTokenModel.find({ family });
-  return docs.map(refreshTokenFromDocument);
-};
-
 const markRefreshTokenAsUsed = async (tokenHash: string): Promise<RefreshToken | null> => {
   const doc = await RefreshTokenModel.findOneAndUpdate(
     { tokenHash },
     { isUsed: true },
-    { new: true },
-  );
-  return doc ? refreshTokenFromDocument(doc) : null;
-};
-
-const revokeRefreshToken = async (tokenHash: string): Promise<RefreshToken | null> => {
-  const doc = await RefreshTokenModel.findOneAndUpdate(
-    { tokenHash },
-    { isRevoked: true },
     { new: true },
   );
   return doc ? refreshTokenFromDocument(doc) : null;
@@ -50,11 +36,6 @@ const revokeAllRefreshTokensByUserId = async (userId: string): Promise<number> =
   return result.modifiedCount;
 };
 
-const deleteRefreshTokensByUserId = async (userId: string): Promise<number> => {
-  const result = await RefreshTokenModel.deleteMany({ userId });
-  return result.deletedCount;
-};
-
 const countActiveRefreshTokensByUserId = async (userId: string): Promise<number> => {
   return RefreshTokenModel.countDocuments({
     userId,
@@ -68,11 +49,8 @@ export const refreshTokenRepository = {
   createRefreshToken,
   findRefreshTokenByHash,
   findRefreshTokensByUserId,
-  findRefreshTokensByFamily,
   markRefreshTokenAsUsed,
-  revokeRefreshToken,
   revokeRefreshTokensByFamily,
   revokeAllRefreshTokensByUserId,
-  deleteRefreshTokensByUserId,
   countActiveRefreshTokensByUserId,
 };

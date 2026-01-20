@@ -114,6 +114,11 @@ const userSchema = new Schema<UserDocument>(
       select: false,
       minlength: [60, 'Invalid password hash'],
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     displayName: {
       type: String,
       trim: true,
@@ -141,9 +146,21 @@ const userSchema = new Schema<UserDocument>(
       default: true,
       index: true,
     },
+    inactiveAt: {
+      type: Date,
+      default: null,
+    },
+    deletionDeadline: {
+      type: Date,
+      default: null,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
+    },
+    verificationDeadline: {
+      type: Date,
+      default: null,
     },
     oauthProviders: {
       type: [oAuthProviderSchema],
@@ -193,6 +210,24 @@ userSchema.index({ 'passkeys.credentialId': 1 });
 userSchema.index(
   { email: 'text', displayName: 'text', firstName: 'text', lastName: 'text' },
   { weights: { email: 10, displayName: 5, firstName: 3, lastName: 3 }, name: 'user_text_search' },
+);
+
+// TTL index for auto-deleting unverified accounts after verificationDeadline
+userSchema.index(
+  { verificationDeadline: 1 },
+  {
+    expireAfterSeconds: 0,
+    partialFilterExpression: { isEmailVerified: false, verificationDeadline: { $ne: null } },
+  },
+);
+
+// TTL index for auto-deleting inactive (soft-deleted) accounts after deletionDeadline
+userSchema.index(
+  { deletionDeadline: 1 },
+  {
+    expireAfterSeconds: 0,
+    partialFilterExpression: { isActive: false, deletionDeadline: { $ne: null } },
+  },
 );
 
 export interface UserDocument extends Document, Omit<User, 'id'> {

@@ -1,16 +1,10 @@
-import { generateDeviceFingerprint } from '@authentication/backend-express/utils';
 import type { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 
 import { appConfig } from '../../config/app.config';
 import type { OAuthProfile } from '../../config/passport.config';
 import { oauthService } from '../services/oauth.service';
-
-const getTokenContext = (req: Request) => ({
-  deviceFingerprint: generateDeviceFingerprint(req),
-  userAgent: req.headers['user-agent'],
-  ipAddress: req.ip,
-});
+import { getTokenContext } from '../utils/token.utils';
 
 const getFrontendUrl = (): string => appConfig.whiteListUrls[0];
 

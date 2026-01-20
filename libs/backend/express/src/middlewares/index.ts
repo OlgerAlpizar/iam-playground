@@ -1,3 +1,4 @@
+export { adminAuth } from './admin-auth/admin-auth.middleware';
 export { apiVersioning } from './api-versioning/api-versioning.middleware';
 export { bodyParser } from './body-parser/body-parser.middleware';
 export { compression } from './compression/compression.middleware';
@@ -6,6 +7,7 @@ export { type DomainAsHttpError, errorHandler } from './error-handler/error-hand
 export { HttpError } from './error-handler/http-error';
 export { helmet } from './helmet/helmet.middleware';
 export { hpp } from './hpp/hpp.middleware';
+export { jwtAuth } from './jwt-auth/jwt-auth.middleware';
 export { mongoSanitize } from './mongo-sanitize/mongo-sanitize.middleware';
 export { morganLogger } from './morgan/morgan.middleware';
 export { notFound } from './not-found/not-found.middleware';

@@ -6,3 +6,7 @@ export interface AuthResponse {
   refreshToken: string;
   expiresIn: number;
 }
+
+export interface RegisterResponse extends AuthResponse {
+  verificationUrl: string | null;
+}

@@ -14,18 +14,17 @@ The authentication backend for IAM Playground. Handles user registration, login,
 - Social login via Passport.js (Google, GitHub)
 - Passkeys/WebAuthn for passwordless authentication
 - Password reset with token expiration
-- Email verification (mocked for now)
+- Email verification with token expiration
 
 ## Stack
 
-Express.js, MongoDB, Mongoose, JWT, Passport.js, Passkeys/WebAuthn, Redis
+Express.js, MongoDB, Mongoose, JWT, Passport.js, Nodemailer
 
 ## Prerequisites
 
 - Node.js 20+
 - pnpm
-- MongoDB (local or Docker)
-- Redis (for sessions)
+- Docker & Docker Compose
 
 ## Setup
 
@@ -33,14 +32,37 @@ Express.js, MongoDB, Mongoose, JWT, Passport.js, Passkeys/WebAuthn, Redis
 # From monorepo root
 pnpm install
 
-# Copy env file
-cp apps/backend/iam-provider/.env.example apps/backend/iam-provider/.env
+# Start MongoDB and Mailhog
+docker-compose up -d
 
-# Start MongoDB and Redis
-docker compose up -d
+# Create .env file (see Environment Variables below)
 
 # Run the service
 pnpm iam-provider:serve
+```
+
+## Docker Services
+
+The `docker-compose.yml` in the monorepo root provides:
+
+| Service          | Port    | Description                          |
+| ---------------- | ------- | ------------------------------------ |
+| **MongoDB**      | `27017` | Database                             |
+| **Mailhog SMTP** | `1025`  | Captures outgoing emails             |
+| **Mailhog UI**   | `8025`  | View emails at http://localhost:8025 |
+
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (reset data)
+docker-compose down -v
 ```
 
 ## Environment Variables
@@ -53,25 +75,39 @@ NODE_ENV=development
 PORT=3010
 
 # CORS
-CORS_ORIGIN=*
-WHITE_LIST_URLS=http://localhost:3000,http://localhost:3001
+WHITE_LIST_URLS=http://localhost:3000,http://localhost:4200
 
-# MongoDB
-MONGO_CONN_STRING=mongodb://localhost:27017/identity
+# MongoDB (matches docker-compose.yml)
+MONGO_CONN_STRING=mongodb://admin:admin123@localhost:27017/iam_provider?authSource=admin
 
-# Redis (sessions)
-REDIS_URL=redis://localhost:6379
+# Redis (optional - falls back to in-memory store if not configured)
+# REDIS_URL=redis://localhost:6379
 
-# JWT
-JWT_SECRET=your-secret-key
-JWT_ACCESS_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
+# JWT (min 32 characters)
+JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long
 
-# OAuth (Passport.js)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
+# Email - Mailhog (matches docker-compose.yml)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_FROM=noreply@iam-provider.local
+
+# OAuth (optional - uncomment to enable)
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+# GOOGLE_CALLBACK_URL=http://localhost:3010/api/v1/oauth/google/callback
+
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
+# GITHUB_CALLBACK_URL=http://localhost:3010/api/v1/oauth/github/callback
+
+# Session (optional)
+# MAX_ACTIVE_SESSIONS=1                  # Max concurrent sessions per user (default: 1)
+
+# WebAuthn/Passkeys (optional)
+# WEBAUTHN_RELYING_PARTY_NAME=IAM Provider  # Relying Party name shown to users
+# WEBAUTHN_RELYING_PARTY_ID=localhost       # Relying Party ID (domain)
+# WEBAUTHN_ORIGIN=http://localhost:3000  # Expected origin for WebAuthn
+# WEBAUTHN_CHALLENGE_TTL_SECONDS=300     # Challenge expiration (default: 5 min)
 ```
 
 ## Scripts
@@ -132,12 +168,13 @@ apps/backend/iam-provider/
 ### Auth
 
 ```
-POST   /api/v1/auth/register     # Register new user
-POST   /api/v1/auth/login        # Login with email/password
-POST   /api/v1/auth/logout       # Logout (invalidate refresh token)
-POST   /api/v1/auth/refresh      # Refresh access token
-POST   /api/v1/auth/forgot       # Request password reset
-POST   /api/v1/auth/reset        # Reset password with token
+POST   /api/v1/auth/register            # Register new user
+POST   /api/v1/auth/login               # Login with email/password
+POST   /api/v1/auth/logout              # Logout (invalidate refresh token)
+POST   /api/v1/auth/refresh             # Refresh access token
+GET    /api/v1/auth/verify-email        # Verify email with token
+POST   /api/v1/auth/resend-verification # Resend verification email
+POST   /api/v1/auth/reactivate          # Reactivate a deactivated account
 ```
 
 ### Profile (/me)
@@ -166,11 +203,41 @@ POST   /api/v1/auth/passkeys/login/options      # Get login options
 POST   /api/v1/auth/passkeys/login/verify       # Verify login
 ```
 
+### Admin - User Management (requires JWT + isAdmin)
+
+```
+GET    /api/v1/users              # Search/list users (with filters & pagination)
+POST   /api/v1/users              # Create user
+GET    /api/v1/users/:id          # Get user by ID
+PATCH  /api/v1/users/:id          # Update user
+DELETE /api/v1/users/:id          # Delete user
+POST   /api/v1/users/:id/verify-email   # Manually verify email
+POST   /api/v1/users/:id/deactivate     # Deactivate account
+POST   /api/v1/users/:id/reactivate     # Reactivate account
+```
+
 ### Health
 
 ```
-GET    /health                   # Health check
+GET    /health                   # Health check (includes DB and Redis status)
 ```
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "environment": "development",
+  "timestamp": "2026-01-19T12:00:00.000Z",
+  "uptime": 123.456,
+  "services": {
+    "database": "healthy",
+    "redis": "unavailable"
+  }
+}
+```
+
+> Services report their individual status independently. Redis is optional (falls back to in-memory).
 
 ## Middlewares
 

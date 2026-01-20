@@ -1,6 +1,7 @@
 export interface UserResponse {
   id: string;
   email: string;
+  isAdmin: boolean;
   isEmailVerified: boolean;
   displayName?: string;
   firstName?: string;

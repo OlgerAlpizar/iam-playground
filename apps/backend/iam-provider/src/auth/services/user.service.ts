@@ -1,8 +1,21 @@
+import { appConfig } from '../../config/app.config';
 import type { CreateUserRequest } from '../dtos/requests/create-user.request.dto';
+import type { SearchUsersRequest } from '../dtos/requests/search-users.request.dto';
 import type { UpdateUserRequest } from '../dtos/requests/update-user.request.dto';
+import type { FindUsersResult } from '../entities/find-users-result.entity';
 import type { User } from '../entities/user.entity';
 import { DuplicateEmailError } from '../errors/duplicate-email.error';
+import { UserNotFoundError } from '../errors/user-not-found.error';
 import { userRepository } from '../repositories/user.repository';
+
+const calculateDeletionDeadline = (): Date => {
+  const days = appConfig.security.inactiveAccountRetentionDays;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+};
+
+const searchUsers = async (params: SearchUsersRequest): Promise<FindUsersResult> => {
+  return userRepository.findUsers(params);
+};
 
 const createUser = async (dto: CreateUserRequest): Promise<User> => {
   const existingUser = await userRepository.findUserByEmail(dto.email);
@@ -55,14 +68,36 @@ const verifyUserEmail = async (userId: string): Promise<User> => {
 };
 
 const deactivateUser = async (userId: string): Promise<User> => {
-  return userRepository.updateUser(userId, { isActive: false });
+  const deletionDeadline = calculateDeletionDeadline();
+
+  return userRepository.updateUser(userId, {
+    isActive: false,
+    inactiveAt: new Date(),
+    deletionDeadline,
+  });
 };
 
 const reactivateUser = async (userId: string): Promise<User> => {
-  return userRepository.updateUser(userId, { isActive: true });
+  const user = await userRepository.findUserById(userId);
+
+  if (!user) {
+    throw new UserNotFoundError(userId);
+  }
+
+  // Can only reactivate if not yet permanently deleted (deletionDeadline hasn't passed)
+  if (user.deletionDeadline && user.deletionDeadline < new Date()) {
+    throw new UserNotFoundError(userId);
+  }
+
+  return userRepository.updateUser(userId, {
+    isActive: true,
+    inactiveAt: undefined,
+    deletionDeadline: undefined,
+  });
 };
 
 export const userService = {
+  searchUsers,
   createUser,
   getUserById,
   getUserByEmail,

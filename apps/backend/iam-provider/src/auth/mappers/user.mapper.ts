@@ -1,6 +1,5 @@
 import type { Types } from 'mongoose';
 
-import type { CreateUserRequest } from '../dtos/requests/create-user.request.dto';
 import type { UpdateUserRequest } from '../dtos/requests/update-user.request.dto';
 import type { UserResponse } from '../dtos/responses/user.response.dto';
 import type { User } from '../entities/user.entity';
@@ -11,12 +10,16 @@ export const userFromDocument = (doc: UserDocument): User => {
     id: (doc._id as Types.ObjectId).toString(),
     email: doc.email,
     passwordHash: doc.passwordHash,
+    isAdmin: doc.isAdmin,
     isEmailVerified: doc.isEmailVerified,
+    verificationDeadline: doc.verificationDeadline,
     displayName: doc.displayName,
     firstName: doc.firstName,
     lastName: doc.lastName,
     avatarUrl: doc.avatarUrl,
     isActive: doc.isActive,
+    inactiveAt: doc.inactiveAt,
+    deletionDeadline: doc.deletionDeadline,
     oauthProviders: doc.oauthProviders ?? [],
     passkeys: doc.passkeys ?? [],
     failedLoginAttempts: doc.failedLoginAttempts,
@@ -24,16 +27,6 @@ export const userFromDocument = (doc: UserDocument): User => {
     lastLoginAt: doc.lastLoginAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
-  };
-};
-
-export const userDocumentFromCreateRequest = (data: CreateUserRequest): Partial<UserDocument> => {
-  return {
-    email: data.email,
-    passwordHash: data.passwordHash,
-    displayName: data.displayName,
-    firstName: data.firstName,
-    lastName: data.lastName,
   };
 };
 
@@ -58,12 +51,20 @@ export const userToDocument = (entity: Partial<User>): Partial<UserDocument> => 
   return {
     ...(entity.email !== undefined && { email: entity.email }),
     ...(entity.passwordHash !== undefined && { passwordHash: entity.passwordHash }),
+    ...(entity.isAdmin !== undefined && { isAdmin: entity.isAdmin }),
     ...(entity.displayName !== undefined && { displayName: entity.displayName }),
     ...(entity.firstName !== undefined && { firstName: entity.firstName }),
     ...(entity.lastName !== undefined && { lastName: entity.lastName }),
     ...(entity.avatarUrl !== undefined && { avatarUrl: entity.avatarUrl }),
     ...(entity.isEmailVerified !== undefined && { isEmailVerified: entity.isEmailVerified }),
+    ...(entity.verificationDeadline !== undefined && {
+      verificationDeadline: entity.verificationDeadline ?? null,
+    }),
     ...(entity.isActive !== undefined && { isActive: entity.isActive }),
+    ...(entity.inactiveAt !== undefined && { inactiveAt: entity.inactiveAt ?? null }),
+    ...(entity.deletionDeadline !== undefined && {
+      deletionDeadline: entity.deletionDeadline ?? null,
+    }),
     ...(entity.oauthProviders !== undefined && { oauthProviders: entity.oauthProviders }),
     ...(entity.passkeys !== undefined && { passkeys: entity.passkeys }),
     ...(entity.failedLoginAttempts !== undefined && {
@@ -77,6 +78,7 @@ export const userToDocument = (entity: Partial<User>): Partial<UserDocument> => 
 export const userToResponse = (user: User): UserResponse => ({
   id: user.id,
   email: user.email,
+  isAdmin: user.isAdmin,
   isEmailVerified: user.isEmailVerified,
   displayName: user.displayName,
   firstName: user.firstName,

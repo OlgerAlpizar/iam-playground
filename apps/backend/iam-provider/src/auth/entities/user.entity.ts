@@ -5,12 +5,16 @@ export interface User {
   id: string;
   email: string;
   passwordHash?: string;
+  isAdmin: boolean;
   isEmailVerified: boolean;
+  verificationDeadline?: Date;
   displayName?: string;
   firstName?: string;
   lastName?: string;
   avatarUrl?: string;
   isActive: boolean;
+  inactiveAt?: Date;
+  deletionDeadline?: Date;
   oauthProviders: OAuthProvider[];
   passkeys: PasskeyCredential[];
   failedLoginAttempts: number;

@@ -32,6 +32,11 @@ const appConfigSchema = z.object({
     mongo: z.object({
       connString: mongoConnectionStringSchema,
     }),
+    redis: z
+      .object({
+        url: z.string().url(),
+      })
+      .optional(),
   }),
   jwt: z.object({
     secret: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
@@ -42,6 +47,7 @@ const appConfigSchema = z.object({
     maxFailedLoginAttempts: z.number().int().positive().default(5),
     lockoutDurationMinutes: z.number().int().positive().default(15),
     bcryptRounds: z.number().int().min(10).max(14).default(12),
+    inactiveAccountRetentionDays: z.number().int().positive().default(30),
   }),
   oauth: z.object({
     google: z
@@ -58,6 +64,29 @@ const appConfigSchema = z.object({
         callbackUrl: z.string().url(),
       })
       .optional(),
+  }),
+  email: z.object({
+    smtp: z
+      .object({
+        host: z.string().min(1),
+        port: z.number().int().positive(),
+        secure: z.boolean().default(false),
+        user: z.string().optional(),
+        pass: z.string().optional(),
+      })
+      .optional(),
+    from: z.string().min(1).default('noreply@localhost.local'),
+    verificationTokenExpiresHours: z.number().int().positive().default(24),
+    passwordResetTokenExpiresHours: z.number().int().positive().default(1),
+  }),
+  session: z.object({
+    maxActiveSessions: z.number().int().positive().default(1),
+  }),
+  webauthn: z.object({
+    rpName: z.string().min(1).default('IAM Provider'),
+    rpId: z.string().min(1).default('localhost'),
+    origin: z.string().url().default('http://localhost:3000'),
+    challengeTtlSeconds: z.number().int().positive().default(300), // 5 minutes
   }),
 });
 
@@ -96,6 +125,11 @@ const parseConfig = (): z.infer<typeof appConfigSchema> => {
       mongo: {
         connString: getRequiredEnv('MONGO_CONN_STRING'),
       },
+      redis: process.env.REDIS_URL
+        ? {
+            url: process.env.REDIS_URL,
+          }
+        : undefined,
     },
     jwt: {
       secret: getRequiredEnv('JWT_SECRET'),
@@ -114,6 +148,9 @@ const parseConfig = (): z.infer<typeof appConfigSchema> => {
         ? parseInt(process.env.LOCKOUT_DURATION_MINUTES, 10)
         : 15,
       bcryptRounds: process.env.BCRYPT_ROUNDS ? parseInt(process.env.BCRYPT_ROUNDS, 10) : 12,
+      inactiveAccountRetentionDays: process.env.INACTIVE_ACCOUNT_RETENTION_DAYS
+        ? parseInt(process.env.INACTIVE_ACCOUNT_RETENTION_DAYS, 10)
+        : 30,
     },
     oauth: {
       google:
@@ -137,6 +174,38 @@ const parseConfig = (): z.infer<typeof appConfigSchema> => {
             }
           : undefined,
     },
+    email: {
+      smtp:
+        process.env.SMTP_HOST && process.env.SMTP_PORT
+          ? {
+              host: process.env.SMTP_HOST,
+              port: parseInt(process.env.SMTP_PORT, 10),
+              secure: process.env.SMTP_SECURE === 'true',
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            }
+          : undefined,
+      from: process.env.SMTP_FROM ?? 'noreply@localhost.local',
+      verificationTokenExpiresHours: process.env.EMAIL_VERIFICATION_TOKEN_EXPIRES_HOURS
+        ? parseInt(process.env.EMAIL_VERIFICATION_TOKEN_EXPIRES_HOURS, 10)
+        : 24,
+      passwordResetTokenExpiresHours: process.env.PASSWORD_RESET_TOKEN_EXPIRES_HOURS
+        ? parseInt(process.env.PASSWORD_RESET_TOKEN_EXPIRES_HOURS, 10)
+        : 1,
+    },
+    session: {
+      maxActiveSessions: process.env.MAX_ACTIVE_SESSIONS
+        ? parseInt(process.env.MAX_ACTIVE_SESSIONS, 10)
+        : 1,
+    },
+    webauthn: {
+      rpName: process.env.WEBAUTHN_RELYING_PARTY_NAME ?? 'IAM Provider',
+      rpId: process.env.WEBAUTHN_RELYING_PARTY_ID ?? 'localhost',
+      origin: process.env.WEBAUTHN_ORIGIN ?? 'http://localhost:3000',
+      challengeTtlSeconds: process.env.WEBAUTHN_CHALLENGE_TTL_SECONDS
+        ? parseInt(process.env.WEBAUTHN_CHALLENGE_TTL_SECONDS, 10)
+        : 300,
+    },
   };
 
   return appConfigSchema.parse(config);
@@ -149,6 +218,7 @@ export const appConfig = {
   port: parsedConfig.server.port,
   whiteListUrls: parsedConfig.cors.whiteListUrls,
   mongoConnString: parsedConfig.database.mongo.connString,
+  redisUrl: parsedConfig.database.redis?.url,
   jwt: {
     secret: parsedConfig.jwt.secret,
     accessTokenExpiresIn: parsedConfig.jwt.accessTokenExpiresIn,
@@ -158,9 +228,25 @@ export const appConfig = {
     maxFailedLoginAttempts: parsedConfig.security.maxFailedLoginAttempts,
     lockoutDurationMinutes: parsedConfig.security.lockoutDurationMinutes,
     bcryptRounds: parsedConfig.security.bcryptRounds,
+    inactiveAccountRetentionDays: parsedConfig.security.inactiveAccountRetentionDays,
   },
   oauth: {
     google: parsedConfig.oauth.google,
     github: parsedConfig.oauth.github,
+  },
+  email: {
+    smtp: parsedConfig.email.smtp,
+    from: parsedConfig.email.from,
+    verificationTokenExpiresHours: parsedConfig.email.verificationTokenExpiresHours,
+    passwordResetTokenExpiresHours: parsedConfig.email.passwordResetTokenExpiresHours,
+  },
+  session: {
+    maxActiveSessions: parsedConfig.session.maxActiveSessions,
+  },
+  webauthn: {
+    rpName: parsedConfig.webauthn.rpName,
+    rpId: parsedConfig.webauthn.rpId,
+    origin: parsedConfig.webauthn.origin,
+    challengeTtlSeconds: parsedConfig.webauthn.challengeTtlSeconds,
   },
 };

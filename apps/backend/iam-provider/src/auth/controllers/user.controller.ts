@@ -1,9 +1,28 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import type { CreateUserRequest } from '../dtos/requests/create-user.request.dto';
+import type { SearchUsersRequest } from '../dtos/requests/search-users.request.dto';
 import type { UpdateUserRequest } from '../dtos/requests/update-user.request.dto';
+import type { SearchUsersResponse } from '../dtos/responses/search-users.response.dto';
 import { userToResponse } from '../mappers/user.mapper';
 import { userService } from '../services/user.service';
+
+const search = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const params = req.query as unknown as SearchUsersRequest;
+    const result = await userService.searchUsers(params);
+    const response: SearchUsersResponse = {
+      users: result.users.map(userToResponse),
+      total: result.total,
+      limit: result.limit,
+      skip: result.skip,
+      hasMore: result.hasMore,
+    };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+};
 
 const create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -77,6 +96,7 @@ const reactivate = async (req: Request, res: Response, next: NextFunction): Prom
 };
 
 export const userController = {
+  search,
   create,
   getById,
   update,
